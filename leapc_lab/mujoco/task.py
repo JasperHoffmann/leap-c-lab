@@ -6,6 +6,6 @@ from leap_c.registry import register_task
 @register_task("half_cheetah")
 class HalfCheetahTask(Task):
     def __init__(self):
-        env_factory = lambda: gym.make("HalfCheetah-v5")
+        env_factory = lambda: gym.make("HalfCheetah-v5", render_mode="rgb_array")
         super().__init__(None, env_factory)  # type: ignore
 
