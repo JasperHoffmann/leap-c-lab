@@ -9,6 +9,7 @@ from gymnasium import spaces
 
 from leap_c.examples.chain.mpc import get_f_expl_expr
 from leap_c.examples.chain.utils import (
+    Ellipsoid,
     RestingChainSolver,
     nominal_params_to_structured_nominal_params,
     sample_from_ellipsoid_surface,
@@ -169,6 +170,9 @@ class ChainEnv(gym.Env):
         n_mass: int = 3,
         fix_point: np.ndarray | None = None,
         pos_last_ref: np.ndarray | None = None,
+        phi_range: list[tuple[float, float]] = (np.pi / 6, np.pi / 3),
+        theta_range: tuple[float, float] = (-np.pi / 4, np.pi / 4),
+        seed: int | None = None,
     ):
         super().__init__()
 
@@ -210,10 +214,17 @@ class ChainEnv(gym.Env):
 
         self.x_ref, self.u_ref = self.resting_chain_solver(p_last=self.pos_last_ref)
 
-        self.ellipsoid_center = self.fix_point
-        self.ellispoid_variability_matrix = np.diag(np.sum(np.array(self.structured_param["L"]), axis=0))
+        self.ellipsoid = Ellipsoid(center=self.fix_point, radii=np.sum(np.array(self.structured_param["L"]), axis=0))
 
-        # self._set_canvas()
+        self.phi_range = phi_range
+        self.theta_range = theta_range
+
+        self.rng = np.random.default_rng(seed)
+
+        # self.ellipsoid_center = self.fix_point
+        # self.ellispoid_variability_matrix = np.diag()
+
+        self._set_canvas()
 
         # For rendering
         # if render_mode is not None:
@@ -263,7 +274,7 @@ class ChainEnv(gym.Env):
         self.canvas = None
         self.line = None
 
-        # self._set_canvas()
+        self._set_canvas()
 
         return self.state, {}
 
@@ -271,8 +282,9 @@ class ChainEnv(gym.Env):
         return self.state
 
     def _init_state_and_action(self):
-        p_last = sample_from_ellipsoid_surface(w=self.ellipsoid_center, Z=self.ellispoid_variability_matrix)
-
+        phi = self.rng.uniform(low=self.phi_range[0], high=self.phi_range[1])
+        theta = self.rng.uniform(low=self.theta_range[0], high=self.theta_range[1])
+        p_last = self.ellipsoid.spherical_to_cartesian(phi=phi, theta=theta)
         x_ss, u_ss = self.resting_chain_solver(p_last=p_last)
 
         return x_ss, u_ss
@@ -287,7 +299,10 @@ class ChainEnv(gym.Env):
         return norm_2(self.x_ref - self.state) < 1e-3
 
     def _set_canvas(self):
-        pass
+        fig = plt.figure(figsize=(10, 10))
+        plt.xlabel("x")
+        plt.ylabel("y")
 
     def render(self):
-        pass
+        # Create a blank (zeros = black) RGB array
+        return np.zeros((300, 400, 3), dtype=np.uint8)
