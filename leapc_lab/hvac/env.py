@@ -12,7 +12,6 @@ from .config import (
 )
 from gymnasium import spaces
 from scipy.constants import convert_temperature
-from .util import merge_price_weather_data, transcribe_continuous_state_space
 
 from leap_c.examples.hvac.util import (
     load_price_data,
@@ -20,6 +19,7 @@ from leap_c.examples.hvac.util import (
     transcribe_continuous_state_space,
     transcribe_discrete_state_space,
     set_temperature_limits,
+    merge_price_weather_data
 )
 
 # Constants
@@ -38,19 +38,20 @@ class StochasticThreeStateRcEnv(gym.Env):
     deterministic dynamics and the stochastic noise terms.
     """
 
+    metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 30}
+
     def __init__(
         self,
         params: None | BestestParameters = None,
         step_size: float = 900.0,  # Default 15 minutes
         start_time: pd.Timestamp | None = None,
         horizon_hours: int = 36,
-        max_hours: int = 30 * 24,  # 30 days
+        max_hours: int = 3 * 24,  # 3 days
         render_mode: str | None = None,
         price_zone: str = "NO_1",
         price_data_path: Path | None = None,
         weather_data_path: Path | None = None,
         enable_noise: bool = True,
-        random_seed: int | None = None,
     ) -> None:
         """
         Initialize the stochastic environment.
@@ -61,12 +62,49 @@ class StochasticThreeStateRcEnv(gym.Env):
             ambient_temperature_function: Function for ambient temperature
             solar_radiation_function: Function for solar radiation
             enable_noise: Whether to include stochastic noise
-            random_seed: Random seed for reproducibility
         """
         N_forecast = 4 * horizon_hours  # Number of forecasted ambient temperatures
 
         self.N_forecast = N_forecast
         self.max_steps = int(max_hours * 3600 / step_size)
+        
+        if price_data_path is None:
+            price_data_path = Path(__file__).parent / "spot_prices.csv"
+        if weather_data_path is None:
+            weather_data_path = Path(__file__).parent / "weather.csv"
+
+        price_data = load_price_data(csv_path=price_data_path).resample("15T").ffill()
+        self.price_data_max = price_data.max(axis=None)
+
+        weather_data = (
+            load_weather_data(csv_path=weather_data_path)
+            .resample("15T")
+            .interpolate(method="linear")
+        )
+
+        data = merge_price_weather_data(
+            price_data=price_data, weather_data=weather_data, merge_type="inner"
+        )
+
+        self.render_mode = render_mode
+        self.data = data
+
+        # Rename NO1 to price
+        self.data.rename(
+            columns={price_zone: "price", "Tout_K": "Ta", "SolGlob": "solar"},
+            inplace=True,
+        )
+
+        # Drop all columns except the ones we need
+        self.data = self.data[["price", "Ta", "solar"]].copy()
+        self.data["price"] = self.data["price"].astype(np.float32)
+        self.data["Ta"] = self.data["Ta"].astype(np.float32)
+        self.data["solar"] = self.data["solar"].astype(np.float32)
+        self.data["time"] = self.data.index.to_numpy(dtype="datetime64[m]")
+        self.data["quarter_hour"] = (
+            self.data.index.hour * 4 + self.data.index.minute // 15
+        ) % (24 * 4)
+        self.data["day"] = self.data["time"].dt.dayofyear % 366
 
         print("env N_forecast: ", self.N_forecast)
 
@@ -95,7 +133,7 @@ class StochasticThreeStateRcEnv(gym.Env):
             + [convert_temperature(40.0, "celsius", "kelvin")]
             * N_forecast  # Ambient temperatures
             + [MAGNITUDE_SOLAR_RADIATION] * N_forecast  # Solar radiation
-            + [np.inf] * N_forecast,  # Prices
+            + [self.price_data_max] * N_forecast,  # Prices
             dtype=np.float32,
         )
         self.observation_space = spaces.Box(low=self.obs_low, high=self.obs_high)
@@ -109,12 +147,14 @@ class StochasticThreeStateRcEnv(gym.Env):
             params if params is not None else BestestHydronicParameters().to_dict()
         )
 
+
         self.step_size = step_size
         self.enable_noise = enable_noise
 
-        # Set random seed for reproducibility
-        if random_seed is not None:
-            np.random.seed(random_seed)
+        #TODO: Make this configurable
+        rng = np.random.default_rng(0)
+        for k, v in self.params.items():
+            self.params[k] = rng.normal(loc=v, scale=0.3 * np.sqrt(v**2))
 
         # Initial state variables [K]
         self.Ti = convert_temperature(20.0, "celsius", "kelvin")
@@ -125,45 +165,9 @@ class StochasticThreeStateRcEnv(gym.Env):
         # Precompute discrete-time matrices including noise covariance
         self.Ad, self.Bd, self.Ed, self.Qd = self._compute_discrete_matrices()
 
-        if price_data_path is None:
-            price_data_path = Path(__file__).parent / "spot_prices.csv"
-        if weather_data_path is None:
-            weather_data_path = Path(__file__).parent / "weather.csv"
-
-        price_data = load_price_data(csv_path=price_data_path).resample("15T").ffill()
-
-        weather_data = (
-            load_weather_data(csv_path=weather_data_path)
-            .resample("15T")
-            .interpolate(method="linear")
-        )
-
-        data = merge_price_weather_data(
-            price_data=price_data, weather_data=weather_data, merge_type="inner"
-        )
-
-
-
-        self.data = data
-
-
-        # Rename NO1 to price
-        self.data.rename(
-            columns={price_zone: "price", "Tout_K": "Ta", "SolGlob": "solar"},
-            inplace=True,
-        )
-
-        # Drop all columns except the ones we need
-        self.data = self.data[["price", "Ta", "solar"]].copy()
-        self.data["price"] = self.data["price"].astype(np.float32)
-        self.data["Ta"] = self.data["Ta"].astype(np.float32)
-        self.data["solar"] = self.data["solar"].astype(np.float32)
-        self.data["time"] = self.data.index.to_numpy(dtype="datetime64[m]")
-        self.data["quarter_hour"] = (self.data.index.hour * 4 + self.data.index.minute // 15) % (24 * 4)
-        self.data["day"] = self.data["time"].dt.dayofyear % 366
-
-
         self.start_time = start_time
+
+        self.uncertainty_params = self._load_uncertainty_params()
 
     def _get_observation(self) -> np.ndarray:
         """
@@ -201,20 +205,36 @@ class StochasticThreeStateRcEnv(gym.Env):
         day_of_year = self.data["day"].iloc[self.idx]
 
         price_forecast = (
-            self.data["price"]
-            .iloc[self.idx : self.idx + self.N_forecast]
-            .to_numpy()
+            self.data["price"].iloc[self.idx : self.idx + self.N_forecast].to_numpy()
         )
 
-        # TODO: Implement forecasts for weather that is not a perfect copy of the data
+        # Step the temperature and solar forecasting errors via the AR1 models
+        uncertainty_level = "high"  # TODO: Make this configurable
+        self.error_forecast_temp = self._predict_temperature_error_AR1(
+            hp=self.N_forecast,
+            F0=self.uncertainty_params["temperature"][uncertainty_level]["F0"],
+            K0=self.uncertainty_params["temperature"][uncertainty_level]["K0"],
+            F=self.uncertainty_params["temperature"][uncertainty_level]["F"],
+            K=self.uncertainty_params["temperature"][uncertainty_level]["K"],
+            mu=self.uncertainty_params["temperature"][uncertainty_level]["mu"],
+        )
+
+        self.error_forecast_solar = self._predict_solar_error_AR1(
+            hp=self.N_forecast,
+            ag0=self.uncertainty_params["solar"][uncertainty_level]["ag0"],
+            bg0=self.uncertainty_params["solar"][uncertainty_level]["bg0"],
+            phi=self.uncertainty_params["solar"][uncertainty_level]["phi"],
+            ag=self.uncertainty_params["solar"][uncertainty_level]["ag"],
+            bg=self.uncertainty_params["solar"][uncertainty_level]["bg"],
+        )
+
         ambient_temperature_forecast = (
             self.data["Ta"].iloc[self.idx : self.idx + self.N_forecast].to_numpy()
-        )
+        ) + self.error_forecast_temp
+
         solar_forecast = (
-            self.data["solar"]
-            .iloc[self.idx : self.idx + self.N_forecast]
-            .to_numpy()
-        )
+            self.data["solar"].iloc[self.idx : self.idx + self.N_forecast].to_numpy()
+        ) + self.error_forecast_solar
 
         return np.concatenate(
             [
@@ -301,7 +321,7 @@ class StochasticThreeStateRcEnv(gym.Env):
         # The discrete-time covariance is Qd = Ad @ Phi
         return Ad @ Phi
 
-    def _reward_function(self, state: np.ndarray, action: np.ndarray) -> float:
+    def _reward_function(self, state: np.ndarray, action: np.ndarray):
         """
         Compute the reward based on the current state and action.
 
@@ -318,13 +338,24 @@ class StochasticThreeStateRcEnv(gym.Env):
         comfort_reward = int(lb <= state[0] <= ub)
 
         # Reward for energy saving
-        energy_reward = 1.0 - np.clip(
-            a=action[0] / self.action_high[0], a_min=0.0, a_max=1.0
-        )
+        price = self.data["price"].iloc[self.idx]
+        energy_consumption_normalized = np.abs(action[0]) / self.action_high[0]
 
+        price_normalized = price / self.price_data_max
+        energy_reward = -price_normalized * energy_consumption_normalized
+
+        # scale energy_reward
         reward = 0.5 * (comfort_reward + energy_reward)
 
-        return reward
+        reward_info = {
+            "prize": price,
+            "energy": np.abs(action[0]),
+            "comfort_reward": comfort_reward,
+            "energy_reward": energy_reward,
+            "success": comfort_reward,
+        }
+
+        return reward, reward_info
 
     def _is_terminated(self) -> bool:
         """
@@ -339,10 +370,131 @@ class StochasticThreeStateRcEnv(gym.Env):
         # return reached_max_time or reached_end_of_data
         return reached_end_of_data or reached_max_steps
 
+    def _load_uncertainty_params(self):
+        """Load the uncertainty parameters.
+
+        Returns
+        -------
+        uncertainty_params : dict
+            Uncertainty parameters
+
+        """
+
+        return {
+            "temperature": {
+                "low": {
+                    "F0": 0,
+                    "K0": 0.6,
+                    "F": 0.92,
+                    "K": 0.4,
+                    "mu": 0,
+                },
+                "medium": {
+                    "F0": 0.15,
+                    "K0": 1.2,
+                    "F": 0.93,
+                    "K": 0.6,
+                    "mu": 0,
+                },
+                "high": {
+                    "F0": -0.58,
+                    "K0": 1.5,
+                    "F": 0.95,
+                    "K": 0.7,
+                    "mu": -0.015,
+                },
+            },
+            "solar": {
+                "low": {
+                    "ag0": 4.44,
+                    "bg0": 57.42,
+                    "phi": 0.62,
+                    "ag": 1.86,
+                    "bg": 45.64,
+                },
+                "medium": {
+                    "ag0": 15.02,
+                    "bg0": 122.6,
+                    "phi": 0.63,
+                    "ag": 4.44,
+                    "bg": 91.97,
+                },
+                "high": {
+                    "ag0": 32.09,
+                    "bg0": 119.94,
+                    "phi": 0.67,
+                    "ag": 10.63,
+                    "bg": 87.44,
+                },
+            },
+        }
+
+    def _predict_temperature_error_AR1(
+        self, hp: int, F0: float, K0: float, F: float, K: float, mu: float
+    ) -> np.ndarray:
+        """
+        Generates an error for the temperature forecast with an AR model with normal distribution in the hp points of the predictions horizon.
+
+        Parameters
+        ----------
+        hp :
+            Number of points in the prediction horizon.
+        F0 :
+            Mean of the initial error model.
+        K0 :
+            Standard deviation of the initial error model.
+        F :
+            Autocorrelation factor of the AR error model, value should be between 0 and 1.
+        K :
+            Standard deviation of the AR error model.
+        mu :
+            Mean value of the distribution function integrated in the AR error model.
+
+        Returns
+        -------
+        error : 1D array
+            Array containing the error values in the hp points.
+
+        """
+
+        error = np.zeros(hp)
+        error[0] = self.np_random.normal(F0, K0)
+        for i_c in range(hp - 1):
+            error[i_c + 1] = self.np_random.normal(error[i_c] * F + mu, K)
+
+        return error
+
+    def _predict_solar_error_AR1(
+        self, hp: int, ag0: float, bg0: float, phi: float, ag: float, bg: float
+    ) -> np.ndarray:
+        """
+        Generates an error for the solar forecast based on the specified parameters using an AR model with Laplace distribution in the hp points of the predictions horizon.
+
+        Parameters
+        ----------
+        hp :
+            Number of points in the prediction horizon.
+        ag0, bg0, phi, ag, bg :
+            Parameters for the AR1 model.
+
+        Returns
+        -------
+        error : 1D numpy array
+            Contains the error values in the hp points.
+
+        """
+
+        error = np.zeros(hp)
+        error[0] = self.np_random.laplace(ag0, bg0)
+        for i_c in range(1, hp):
+            error[i_c] = self.np_random.laplace(error[i_c - 1] * phi + ag, bg)
+
+        return error
 
     def step(
-        self, action: np.ndarray,
-    ) -> tuple[np.ndarray, None, None, None, dict, None]:
+        self,
+        action: np.ndarray,
+    ) -> tuple[np.ndarray, float, bool, bool, dict]:
         """
         Perform a simulation step with exact discrete-time dynamics including noise.
 
@@ -367,7 +519,7 @@ class StochasticThreeStateRcEnv(gym.Env):
         # Add Gaussian noise if enabled
         if self.enable_noise:
             # Sample from multivariate normal distribution with exact covariance
-            noise = np.random.default_rng().multivariate_normal(
+            noise = self.np_random.multivariate_normal(
                 mean=np.zeros(3), cov=self.Qd
             )
             x_next += noise
@@ -385,14 +537,16 @@ class StochasticThreeStateRcEnv(gym.Env):
         )
 
         obs = self._get_observation()
-        reward = self._reward_function(state=self.state, action=action)
-        terminated = self._is_terminated()
-        truncated = None  # We do not truncate based on time steps
-        info = {"time_forecast": time_forecast}
+        reward, reward_info = self._reward_function(state=self.state, action=action)
+        truncated = self._is_terminated()
+        terminated = False  # We do not truncate based on time steps
+        info = {"time_forecast": time_forecast, "task": reward_info}
 
         return obs, reward, terminated, truncated, info
 
-    def reset(self, state_0: np.ndarray | None = None, seed=None, options=None) -> tuple[np.ndarray, dict]:
+    def reset(
+        self, state_0: np.ndarray | None = None, seed=None, options=None
+    ) -> tuple[np.ndarray, dict]:
         """Reset the model state to initial values."""
         super().reset(seed=seed)
 
@@ -404,10 +558,8 @@ class StochasticThreeStateRcEnv(gym.Env):
             self.idx = self.data.index.get_loc(self.start_time)
         else:
             min_start_idx = 0
-            max_start_idx = len(self.data) - self.N_forecast - self.max_steps +1
-            self.idx = np.random.randint(
-                low=min_start_idx, high=max_start_idx
-            )
+            max_start_idx = len(self.data) - self.N_forecast - self.max_steps + 1
+            self.idx = self.np_random.integers(low=min_start_idx, high=max_start_idx + 1)
 
         self.step_cnter = 0
 
@@ -515,7 +667,6 @@ def decompose_observation(obs: np.ndarray) -> tuple:
             assert len(forecast) == N_forecast, (
                 f"Expected {N_forecast} forecasts, got {len(forecast)}"
             )
-
 
     return (
         quarter_hour,
