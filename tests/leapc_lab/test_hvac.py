@@ -277,7 +277,7 @@ def create_planner_with_custom_params(
                 default=param.default,
                 space=param.space,
                 interface="learnable" if ta_learnable else "non-learnable",
-                end_stages=param.end_stages,
+                splits=param.splits,
             )
         elif param.name == "solar":
             params[i] = AcadosParameter(
@@ -285,7 +285,7 @@ def create_planner_with_custom_params(
                 default=param.default,
                 space=param.space,
                 interface="learnable" if solar_learnable else "non-learnable",
-                end_stages=param.end_stages,
+                splits=param.splits,
             )
         elif param.name == "price":
             params[i] = AcadosParameter(
@@ -293,7 +293,7 @@ def create_planner_with_custom_params(
                 default=param.default,
                 space=param.space,
                 interface="learnable" if price_learnable else "non-learnable",
-                end_stages=param.end_stages,
+                splits=param.splits,
             )
 
     cfg = HvacPlannerConfig(
