@@ -3,6 +3,10 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from leap_c.diff_mpc.function import AcadosDiffMpcCtx
+from leap_c.torch import AcadosDiffMpcTorch
+from leap_c.utils.collate import collate_acados_diff_mpc_ctx
+from leap_c.utils.parameters import broadcast_default_param
 
 from leapc_lab.chain.acados_ocp import (
     ChainInitializer,
@@ -10,10 +14,7 @@ from leapc_lab.chain.acados_ocp import (
 )
 from leapc_lab.chain.dynamics import define_f_expl_expr
 from leapc_lab.chain.utils.resting_chain_solver import RestingChainSolver
-from leap_c.ocp.acados.diff_mpc import collate_acados_diff_mpc_ctx
-from leap_c.ocp.acados.torch import AcadosDiffMpcCtx, AcadosDiffMpcTorch
 from leapc_lab.planner import ParameterizedPlanner
-from leap_c.utils.parameters import broadcast_default_param
 
 
 @dataclass(kw_only=True)

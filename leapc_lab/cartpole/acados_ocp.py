@@ -4,10 +4,10 @@ import casadi as ca
 import gymnasium as gym
 import numpy as np
 from acados_template import AcadosOcp
+from leap_c.parameters import AcadosParameterManager
+from leap_c.utils.parameters import ParamSplits, n_segments
 
 from leapc_lab.utils.casadi import integrate_erk4
-from leap_c.ocp.acados.parameters import AcadosParameterManager
-from leap_c.utils.parameters import ParamSplits, n_segments
 
 CartPoleAcadosCostType = Literal["EXTERNAL", "NONLINEAR_LS"]
 """The type of cost to use, either "EXTERNAL" or "NONLINEAR_LS". Both model the same cost function, 

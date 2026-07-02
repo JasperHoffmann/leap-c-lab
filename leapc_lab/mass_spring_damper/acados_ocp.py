@@ -5,8 +5,7 @@ import gymnasium as gym
 import matplotlib.pyplot as plt
 import numpy as np
 from acados_template import AcadosOcp, AcadosOcpSolver
-
-from leap_c.ocp.acados.parameters import AcadosParameterManager
+from leap_c.parameters import AcadosParameterManager
 
 
 def export_parametric_ocp(

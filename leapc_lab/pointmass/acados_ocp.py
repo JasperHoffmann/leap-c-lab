@@ -4,8 +4,7 @@ import casadi as ca
 import gymnasium as gym
 import numpy as np
 from acados_template import AcadosOcp
-
-from leap_c.ocp.acados.parameters import AcadosParameterManager
+from leap_c.parameters import AcadosParameterManager
 
 
 def export_parametric_ocp(

@@ -10,6 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
   "leap-c",
+  "acados-template",
   "casadi",
   "gymnasium==1.1.1",
   "matplotlib",
@@ -26,6 +27,16 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["leapc_lab*"]
+
+[tool.uv.sources]
+# leap-c: default from GitHub (for CI and other developers).
+leap-c = { git = "https://github.com/leap-c/leap-c.git", branch = "main" }
+# leap-c local development: uncomment the line below and comment out the git source above.
+# leap-c = { path = "/path/to/your/leap-c", editable = true }
+
+# acados-template is not on PyPI. Uncomment and point at your local acados checkout.
+# Build acados first: https://docs.acados.org/
+# acados-template = { path = "/path/to/your/acados/interfaces/acados_template", editable = true }
 
 [tool.pytest.ini_options]
 testpaths = "tests"
