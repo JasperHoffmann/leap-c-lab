@@ -7,8 +7,8 @@ import numpy as np
 from acados_template import AcadosOcp, AcadosOcpFlattenedIterate
 from casadi.tools import entry, struct_symSX
 
-from leap_c.examples.chain.dynamics import define_f_expl_expr
-from leap_c.examples.utils.casadi import integrate_erk4
+from leapc_lab.chain.dynamics import define_f_expl_expr
+from leapc_lab.utils.casadi import integrate_erk4
 from leap_c.ocp.acados.data import AcadosOcpSolverInput
 from leap_c.ocp.acados.initializer import AcadosDiffMpcInitializer
 from leap_c.ocp.acados.parameters import AcadosParameterManager

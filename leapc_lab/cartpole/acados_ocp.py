@@ -5,7 +5,7 @@ import gymnasium as gym
 import numpy as np
 from acados_template import AcadosOcp
 
-from leap_c.examples.utils.casadi import integrate_erk4
+from leapc_lab.utils.casadi import integrate_erk4
 from leap_c.ocp.acados.parameters import AcadosParameterManager
 from leap_c.utils.parameters import ParamSplits, n_segments
 

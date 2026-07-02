@@ -10,7 +10,7 @@ from matplotlib.axes import Axes
 from matplotlib.lines import Line2D
 from matplotlib.patches import FancyArrowPatch
 
-from leap_c.examples.utils.matplotlib_env import MatplotlibRenderEnv
+from leapc_lab.utils.matplotlib_env import MatplotlibRenderEnv
 
 DifficultyLevel = Literal["easy", "hard"]
 

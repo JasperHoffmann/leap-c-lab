@@ -7,16 +7,16 @@ from warnings import warn
 
 from gymnasium import Env
 
-from leap_c.controller import CtxType, ParameterizedController
-from leap_c.planner import ControllerFromPlanner, ParameterizedPlanner
+from leapc_lab.controller import CtxType, ParameterizedController
+from leapc_lab.planner import ControllerFromPlanner, ParameterizedPlanner
 
 ExampleEnvName = Literal["cartpole", "cartpole_balance", "chain", "mass_spring_damper", "pointmass"]
 ENV_REGISTRY: dict[str, tuple[str, str]] = {
-    "cartpole": ("leap_c.examples.cartpole.env", "CartPoleEnv"),
-    "cartpole_balance": ("leap_c.examples.cartpole.env", "CartPoleBalanceEnv"),
-    "chain": ("leap_c.examples.chain.env", "ChainEnv"),
-    "mass_spring_damper": ("leap_c.examples.mass_spring_damper.env", "MassSpringDamperEnv"),
-    "pointmass": ("leap_c.examples.pointmass.env", "PointMassEnv"),
+    "cartpole": ("leapc_lab.cartpole.env", "CartPoleEnv"),
+    "cartpole_balance": ("leapc_lab.cartpole.env", "CartPoleBalanceEnv"),
+    "chain": ("leapc_lab.chain.env", "ChainEnv"),
+    "mass_spring_damper": ("leapc_lab.mass_spring_damper.env", "MassSpringDamperEnv"),
+    "pointmass": ("leapc_lab.pointmass.env", "PointMassEnv"),
 }
 
 
@@ -43,20 +43,20 @@ def create_env(env_name: ExampleEnvName, **kw: Any) -> Env:
 
 PLANNER_REGISTRY: dict[str, tuple[str, str, str, dict[str, Any]]] = {
     "cartpole": (
-        "leap_c.examples.cartpole.planner",
+        "leapc_lab.cartpole.planner",
         "CartPolePlanner",
         "CartPolePlannerConfig",
         {},
     ),
-    "chain": ("leap_c.examples.chain.planner", "ChainPlanner", "ChainPlannerConfig", {}),
+    "chain": ("leapc_lab.chain.planner", "ChainPlanner", "ChainPlannerConfig", {}),
     "mass_spring_damper": (
-        "leap_c.examples.mass_spring_damper.planner",
+        "leapc_lab.mass_spring_damper.planner",
         "MassSpringDamperPlanner",
         "MassSpringDamperPlannerConfig",
         {},
     ),
     "pointmass": (
-        "leap_c.examples.pointmass.planner",
+        "leapc_lab.pointmass.planner",
         "PointMassPlanner",
         "PointMassPlannerConfig",
         {},

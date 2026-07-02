@@ -2,9 +2,9 @@ import numpy as np
 import pytest
 import torch
 
-from leap_c.examples.chain.env import ChainEnv, ChainEnvConfig
-from leap_c.examples.chain.planner import ChainPlanner, ChainPlannerConfig
-from leap_c.planner import ControllerFromPlanner
+from leapc_lab.chain.env import ChainEnv, ChainEnvConfig
+from leapc_lab.chain.planner import ChainPlanner, ChainPlannerConfig
+from leapc_lab.planner import ControllerFromPlanner
 
 
 @pytest.fixture(scope="module")

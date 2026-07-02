@@ -7,7 +7,7 @@ import gymnasium as gym
 from numpy import ndarray
 from torch import Tensor, nn
 
-from leap_c.controller import CtxType, ParameterizedController
+from leapc_lab.controller import CtxType, ParameterizedController
 
 
 class ParameterizedPlanner(nn.Module, Generic[CtxType], metaclass=ABCMeta):

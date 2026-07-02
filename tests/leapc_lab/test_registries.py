@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from leap_c.examples import (
+from leapc_lab import (
     CONTROLLER_REGISTRY,
     ENV_REGISTRY,
     PLANNER_REGISTRY,
@@ -107,8 +107,8 @@ class TestControllers:
         reuse_code_base_dir = object()
         kwargs = {"foo": object(), "bar": object()}
         with (
-            patch("leap_c.examples.create_planner", return_value=Mock()) as mock_create_planner,
-            patch("leap_c.examples.ControllerFromPlanner", return_value=Mock()) as mock_CtrlFromPln,
+            patch("leapc_lab.create_planner", return_value=Mock()) as mock_create_planner,
+            patch("leapc_lab.ControllerFromPlanner", return_value=Mock()) as mock_CtrlFromPln,
         ):
             ctrl: Mock = create_controller(planner_name, reuse_code_base_dir, **kwargs)
 

@@ -4,12 +4,12 @@ import pytest
 import torch
 from acados_template import AcadosOcpSolver
 
-from leap_c.examples.mass_spring_damper.env import MassSpringDamperEnv
-from leap_c.examples.mass_spring_damper.planner import (
+from leapc_lab.mass_spring_damper.env import MassSpringDamperEnv
+from leapc_lab.mass_spring_damper.planner import (
     MassSpringDamperPlanner,
     MassSpringDamperPlannerConfig,
 )
-from leap_c.planner import ControllerFromPlanner
+from leapc_lab.planner import ControllerFromPlanner
 
 
 @pytest.fixture(scope="module")

@@ -1,9 +1,9 @@
 import numpy as np
 import torch
 
-from leap_c.examples.pointmass.env import PointMassEnv
-from leap_c.examples.pointmass.planner import PointMassPlanner, PointMassPlannerConfig
-from leap_c.planner import ControllerFromPlanner
+from leapc_lab.pointmass.env import PointMassEnv
+from leapc_lab.pointmass.planner import PointMassPlanner, PointMassPlannerConfig
+from leapc_lab.planner import ControllerFromPlanner
 
 
 def test_run_closed_loop(n_iter: int = 200) -> None:

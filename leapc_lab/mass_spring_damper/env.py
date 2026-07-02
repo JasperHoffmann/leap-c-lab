@@ -8,7 +8,7 @@ from gymnasium.spaces import Box
 from matplotlib.lines import Line2D
 from scipy.linalg import solve_discrete_are
 
-from leap_c.examples.utils.matplotlib_env import MatplotlibRenderEnv
+from leapc_lab.utils.matplotlib_env import MatplotlibRenderEnv
 
 
 @dataclass(kw_only=True)

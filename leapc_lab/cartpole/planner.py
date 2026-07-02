@@ -4,13 +4,13 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from leap_c.examples.cartpole.acados_ocp import (
+from leapc_lab.cartpole.acados_ocp import (
     CartPoleAcadosCostType,
     export_parametric_ocp,
 )
 from leap_c.ocp.acados.diff_mpc import collate_acados_diff_mpc_ctx
 from leap_c.ocp.acados.torch import AcadosDiffMpcCtx, AcadosDiffMpcTorch
-from leap_c.planner import ParameterizedPlanner
+from leapc_lab.planner import ParameterizedPlanner
 from leap_c.utils.parameters import broadcast_default_param
 
 
