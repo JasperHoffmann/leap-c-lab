@@ -15,10 +15,15 @@ env:
 
 jobs:
   build:
+    name: build py${{ matrix.python-version }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
 
     steps:
       - name: Checkout
@@ -44,18 +49,17 @@ jobs:
           context: .
           file: docker/ci/Dockerfile
           platforms: linux/amd64
+          build-args: |
+            PYTHON_VERSION=${{ matrix.python-version }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:ubuntu24.04
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.vars.outputs.short_sha }}
-          cache-from: type=gha,scope=leap-c-lab-ci-amd64
-          cache-to: type=gha,scope=leap-c-lab-ci-amd64,mode=max
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:py${{ matrix.python-version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:py${{ matrix.python-version }}-ubuntu24.04
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:py${{ matrix.python-version }}-sha-${{ steps.vars.outputs.short_sha }}
+          cache-from: type=gha,scope=leap-c-lab-ci-py${{ matrix.python-version }}-amd64
+          cache-to: type=gha,scope=leap-c-lab-ci-py${{ matrix.python-version }}-amd64,mode=max
 
       - name: Smoke test image
         run: |
-          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
-            bash -lc 'for py in 3.11 3.12 3.13; do \
-              VIRTUAL_ENV=/opt/venvs/$py /opt/venvs/$py/bin/python -c \
-              "import torch, acados_template, casadi, gymnasium, numpy, scipy; print(\"$py ok\")"; \
-            done'
+          docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:py${{ matrix.python-version }} \
+            python -c "import torch, acados_template, casadi, gymnasium, numpy, scipy; print('py${{ matrix.python-version }} ok')"

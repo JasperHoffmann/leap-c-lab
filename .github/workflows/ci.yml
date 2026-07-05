@@ -33,7 +33,7 @@ jobs:
       contents: read
       packages: read
     container:
-      image: ghcr.io/leap-c/leap-c-lab-ci:latest
+      image: ghcr.io/leap-c/leap-c-lab-ci:py${{ matrix.python-version }}
       credentials:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
@@ -51,8 +51,8 @@ jobs:
 
       - name: Activate Python ${{ matrix.python-version }}
         run: |
-          echo "/opt/venvs/${{ matrix.python-version }}/bin" >> "$GITHUB_PATH"
-          echo "VIRTUAL_ENV=/opt/venvs/${{ matrix.python-version }}" >> "$GITHUB_ENV"
+          echo "/opt/venv/bin" >> "$GITHUB_PATH"
+          echo "VIRTUAL_ENV=/opt/venv" >> "$GITHUB_ENV"
 
       - name: Install leap-c and repo
         run: |
