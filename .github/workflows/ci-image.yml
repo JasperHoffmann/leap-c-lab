@@ -34,15 +34,21 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Short SHA
+        id: vars
+        run: echo "short_sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+
       - name: Build and push image
         uses: docker/build-push-action@v7
         with:
           context: .
           file: docker/ci/Dockerfile
+          platforms: linux/amd64
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:ubuntu24.04
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ steps.vars.outputs.short_sha }}
           cache-from: type=gha,scope=leap-c-lab-ci-amd64
           cache-to: type=gha,scope=leap-c-lab-ci-amd64,mode=max
 
@@ -51,5 +57,5 @@ jobs:
           docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
             bash -lc 'for py in 3.11 3.12 3.13; do \
               VIRTUAL_ENV=/opt/venvs/$py /opt/venvs/$py/bin/python -c \
-              "import torch, casadi, gymnasium, numpy, scipy; print(\"$py ok\")"; \
+              "import torch, acados_template, casadi, gymnasium, numpy, scipy; print(\"$py ok\")"; \
             done'
