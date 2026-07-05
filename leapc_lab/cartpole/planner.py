@@ -4,9 +4,9 @@ from pathlib import Path
 import numpy as np
 import torch
 from leap_c.diff_mpc.function import AcadosDiffMpcCtx
+from leap_c.parameters.utils import broadcast_default_param
 from leap_c.torch import AcadosDiffMpcTorch
 from leap_c.utils.collate import collate_acados_diff_mpc_ctx
-from leap_c.parameters.utils import broadcast_default_param
 
 from leapc_lab.cartpole.acados_ocp import (
     CartPoleAcadosCostType,
