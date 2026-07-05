@@ -22,6 +22,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "moviepy",
+  "pygame",
   "pytest==8.4.0",
   "ruff==0.12.12",
 ]
