@@ -2,7 +2,7 @@ name: ci-image
 
 on:
   push:
-    branches: [main]
+    branches: [main, ci-acados-image]
     paths:
       - docker/ci/Dockerfile
       - pyproject.toml
