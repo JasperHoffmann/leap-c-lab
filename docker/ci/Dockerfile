@@ -8,36 +8,17 @@
 # during CI. This avoids maintaining a duplicated dependency union here.
 FROM ghcr.io/leap-c/acados-ci:ubuntu24.04
 
-COPY pyproject.toml /tmp/leap-c-lab-pyproject.toml
-
-# Generate requirements from pyproject.toml so dependency versions have a
-# single source of truth. Exclude repos-under-test and acados-template, which
-# is installed from the acados checkout baked into the base image.
-RUN python3 - <<'PY'
-import re
-import tomllib
-
-with open('/tmp/leap-c-lab-pyproject.toml', 'rb') as f:
-    pyproject = tomllib.load(f)
-
-project = pyproject['project']
-deps = list(project.get('dependencies', []))
-deps.extend(project.get('optional-dependencies', {}).get('dev', []))
-
-excluded = {'leap-c', 'acados-template'}
-with open('/tmp/leap-c-lab-requirements.txt', 'w') as f:
-    for dep in deps:
-        name = re.split(r'\s*(?:\[|==|!=|<=|>=|<|>|~=|;)', dep, maxsplit=1)[0].lower()
-        if name not in excluded:
-            f.write(dep + '\n')
-PY
+COPY pyproject.toml README.md /tmp/leap-c-lab/
+COPY leapc_lab /tmp/leap-c-lab/leapc_lab
 
 # Bake all deps into /opt/venvs/{3.11,3.12,3.13}.
 RUN for py in 3.11 3.12 3.13; do \
       uv venv --python $py /opt/venvs/$py && \
+      VIRTUAL_ENV=/opt/venvs/$py uv pip install /opt/acados/interfaces/acados_template && \
       VIRTUAL_ENV=/opt/venvs/$py uv pip install \
-        /opt/acados/interfaces/acados_template \
-        -r /tmp/leap-c-lab-requirements.txt \
+        "git+https://github.com/leap-c/leap-c.git@main" && \
+      VIRTUAL_ENV=/opt/venvs/$py uv pip install -e "/tmp/leap-c-lab[dev]" && \
+      VIRTUAL_ENV=/opt/venvs/$py uv pip uninstall -y leap-c leap-c-lab \
       && rm -rf /root/.cache/uv; \
     done
 
