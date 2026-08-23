@@ -14,3 +14,6 @@ output/
 .envrc
 
 # Local uv source override
+
+# marimo notebook session state
+notebooks/__marimo__/
